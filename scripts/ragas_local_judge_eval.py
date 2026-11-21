@@ -33,18 +33,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from openai import OpenAI  # noqa: E402
-from ragas.embeddings import HuggingFaceEmbeddings  # noqa: E402
-from ragas.llms import llm_factory  # noqa: E402
-from ragas.metrics.collections import AnswerRelevancy, Faithfulness  # noqa: E402
+from openai import OpenAI
+from ragas.embeddings import HuggingFaceEmbeddings
+from ragas.llms import llm_factory
+from ragas.metrics.collections import AnswerRelevancy, Faithfulness
 
-from qe.config import validate_local_url  # noqa: E402
-from qe.rag.chunker import chunk_all  # noqa: E402
-from qe.rag.evaluation import load_dataset, validate_dataset  # noqa: E402
-from qe.rag.local import LocalChatGenerator  # noqa: E402
-from qe.rag.pipeline import NOT_IN_KB, RagPipeline  # noqa: E402
-from qe.rag.retriever import Retriever  # noqa: E402
-from qe.rag.sources import load_documents  # noqa: E402
+from qe.config import validate_local_url
+from qe.rag.chunker import chunk_all
+from qe.rag.evaluation import load_dataset, validate_dataset
+from qe.rag.local import LocalChatGenerator
+from qe.rag.pipeline import NOT_IN_KB, RagPipeline
+from qe.rag.retriever import Retriever
+from qe.rag.sources import load_documents
 
 MODEL_LABEL = "qwen2.5-7b-instruct-q4_k_m"
 JUDGE_URL = validate_local_url("http://127.0.0.1:8081/v1", {"127.0.0.1"})
@@ -170,9 +170,9 @@ def main() -> int:
         row = {"id": case["id"], "category": case["category"], "question": case["question"],
                "reference": case["reference"], "response": a["response"]}
         for name, fn in (
-            ("faithfulness", lambda: faith.score(user_input=case["question"], response=a["response"],
+            ("faithfulness", lambda a=a, case=case: faith.score(user_input=case["question"], response=a["response"],
                                                  retrieved_contexts=a["contexts"])),
-            ("answer_relevancy", lambda: relevance.score(user_input=case["question"], response=a["response"])),
+            ("answer_relevancy", lambda a=a, case=case: relevance.score(user_input=case["question"], response=a["response"])),
         ):
             t0 = time.time()
             row[name], row[name + "_error"] = score_with_retry(name, fn, args.judge_timeout)

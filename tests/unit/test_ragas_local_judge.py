@@ -88,7 +88,7 @@ def test_save_judge_progress_writes_jsonl_and_csv(tmp_path):
 
     assert json.loads(jsonl.read_text(encoding="utf-8").strip())["id"] == "RAG-01"
     with csv_path.open(encoding="utf-8", newline="") as fh:
-        assert list(csv.DictReader(fh))[0]["id"] == "RAG-01"
+        assert next(iter(csv.DictReader(fh)))["id"] == "RAG-01"
 
 
 def test_default_judge_timeout_is_600_seconds():

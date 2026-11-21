@@ -30,13 +30,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from ragas.metrics.collections import BleuScore, CHRFScore, NonLLMStringSimilarity, RougeScore  # noqa: E402
+from ragas.metrics.collections import (
+    BleuScore,
+    CHRFScore,
+    NonLLMStringSimilarity,
+    RougeScore,
+)
 
-from qe.rag.chunker import chunk_all  # noqa: E402
-from qe.rag.evaluation import load_dataset, retrieval_report, validate_dataset  # noqa: E402
-from qe.rag.pipeline import ExtractiveGenerator, RagPipeline  # noqa: E402
-from qe.rag.retriever import Retriever  # noqa: E402
-from qe.rag.sources import load_documents  # noqa: E402
+from qe.rag.chunker import chunk_all
+from qe.rag.evaluation import load_dataset, retrieval_report, validate_dataset
+from qe.rag.pipeline import ExtractiveGenerator, RagPipeline
+from qe.rag.retriever import Retriever
+from qe.rag.sources import load_documents
 
 REPORT_DIR = ROOT / "reports" / "rag"
 THRESHOLDS = ROOT / "rag" / "eval" / "thresholds.json"
