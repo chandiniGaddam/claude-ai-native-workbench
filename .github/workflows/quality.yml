@@ -1,0 +1,187 @@
+# Quality pipeline for the QE workbench.
+#
+# Jobs
+#   unit      ruff lint + pytest tests/unit (no application needed)
+#   e2e       starts the AUT with the isolated Docker Compose stack, then runs the API and
+#             Playwright suites and enforces the minimum 8-test deterministic gate
+#   ragas     optional; manual dispatch only. Runs the offline dry run of the RAG evaluation.
+#             It makes NO paid API call: scripts/run_ragas.py refuses the paid path, and
+#             QE_ALLOW_PAID_API is never set here.
+#
+# The AUT (starter application) is not in this repository. CI downloads pinned
+# D4 - Starter Code.zip from public commit 3e3eb67, verifies it, extracts it only in
+# RUNNER_TEMP, and Docker builds only from a verified copy in .aut/.
+#
+# Secrets: none are required. ANTHROPIC_API_KEY is not referenced anywhere in this file.
+
+name: quality
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      run_ragas:
+        description: "Run the offline Ragas dry run (no paid API calls)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: quality-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  PIP_DISABLE_PIP_VERSION_CHECK: "1"
+  AUT_COMMIT: "3e3eb67"
+  AUT_SOURCE_URL: "https://raw.githubusercontent.com/sharmaanku/git-demo/3e3eb67/D4%20-%20Starter%20Code.zip"
+  AUT_SOURCE_SHA256: "2ca85927eddbce79f38fee4009535fbce4622a1a10b826abaf520b91f58c0d88"
+
+jobs:
+  unit:
+    name: Lint and unit tests
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+
+      - name: Install Chromium for Playwright
+        run: python -m playwright install --with-deps chromium
+
+      - name: Ruff lint
+        run: ruff check .
+
+      - name: Unit tests
+        # Writes reports/junit.xml, reports/html/report.html (pytest.ini addopts).
+        run: python -m pytest tests/unit
+
+      - name: Upload unit test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  e2e:
+    name: API, UI and gate (isolated AUT stack)
+    needs: unit
+    runs-on: ubuntu-24.04
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Obtain pinned AUT starter source
+        run: |
+          set -euo pipefail
+          source_zip="$RUNNER_TEMP/D4 - Starter Code.zip"
+          curl --fail --location --retry 3 "$AUT_SOURCE_URL" -o "$source_zip"
+          echo "$AUT_SOURCE_SHA256  $source_zip" | sha256sum -c -
+          aut_root="$RUNNER_TEMP/aut"
+          mkdir -p "$aut_root"
+          unzip -q "$source_zip" -d "$aut_root"
+          test -f "$aut_root/starter_code/backend/pom.xml"
+          test -f "$aut_root/starter_code/frontend/package.json"
+          test -f "$aut_root/starter_code/db-setup/01-create-users.sql"
+          echo "AUT_DIR=$aut_root/starter_code" >> "$GITHUB_ENV"
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+
+      - name: Install Chromium for Playwright
+        run: python -m playwright install --with-deps chromium
+
+      - name: Start isolated AUT stack (fresh database)
+        # Generates .env (git-ignored), snapshots AUT_DIR into .aut/, then
+        # docker compose down -v && up --build --wait. Healthy = MySQL, backend, frontend.
+        run: scripts/reset_aut.sh
+
+      - name: API and UI tests
+        env:
+          AUT_API_URL: http://localhost:8080
+          AUT_UI_URL: http://localhost:5173
+        # Tests marked needs_backend / needs_frontend skip (never pass) if the stack is down.
+        run: python -m pytest tests/api tests/ui
+
+      - name: Deterministic-test gate (>= 8 distinct gate IDs passed)
+        # No pipe: GitHub's default bash does not set pipefail, so a piped exit code is lost.
+        run: |
+          python scripts/check_gate.py reports/junit.xml --min 8 > reports/gate.txt || status=$?
+          cat reports/gate.txt
+          exit "${status:-0}"
+
+      - name: Capture compose logs on failure
+        if: failure()
+        run: docker compose logs --no-color > reports/compose.log 2>&1 || true
+
+      - name: Stop stack and delete its data volume
+        if: always()
+        run: scripts/reset_aut.sh --down
+
+      - name: Upload API/UI report, screenshots and traces
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-report
+          path: reports/
+          if-no-files-found: warn
+          retention-days: 14
+
+  ragas:
+    name: Ragas dry run (optional, manual, no paid calls)
+    needs: unit
+    if: github.event_name == 'workflow_dispatch' && inputs.run_ragas
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.lock
+
+      - name: Install locked dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.lock
+
+      - name: Offline RAG evaluation rows (no API call)
+        # Without QE_ALLOW_PAID_API=1 the script writes reports/rag/ragas_rows.json using
+        # the offline extractive generator and makes no network call.
+        run: python -I scripts/run_ragas.py
+
+      - name: Upload RAG rows
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ragas-dry-run
+          path: reports/rag/
+          if-no-files-found: warn
+          retention-days: 14

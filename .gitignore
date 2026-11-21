@@ -1,0 +1,25 @@
+# Project-local toolchain (uv, Python, caches)
+.tools/
+
+# Python
+.venv/
+.venv-eval/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+
+# Generated output
+reports/*
+!reports/.gitkeep
+rag/knowledge/*
+!rag/knowledge/.gitkeep
+test-results/
+
+# Scratch copies of the AUT used for builds
+.aut/
+
+# Secrets
+.env
+.env.*
+.claude/settings.local.json

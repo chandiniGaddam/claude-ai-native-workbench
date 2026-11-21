@@ -1,0 +1,12 @@
+# RAG evaluation dependencies, installed into a separate .venv-eval (Python 3.12).
+# Running an evaluation calls the paid Claude API: ask for approval first (see CLAUDE.md).
+-r requirements.txt
+ragas==0.4.4              # pinned exactly; the Ragas API changes between minor versions
+langchain-anthropic==1.7.12   # Claude judge adapter for Ragas (preferred judge: claude-sonnet-5-5)
+# Note: ragas 0.4.4 hard-depends on openai and langchain_openai. They get installed but are
+# never called; the judge is Claude.
+# Non-LLM Ragas metric extras (BLEU, chrF, ROUGE, string similarity). Ragas raises ImportError
+# without them. They run offline and make no API call.
+rouge-score==0.1.2
+sacrebleu==2.6.0
+rapidfuzz==3.14.6

@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "rag-sources-readonly": {
+      "type": "stdio",
+      "command": "/home/labuser/Downloads/claude-ai-native-workbench/.tools/node/bin/node",
+      "args": [
+        "/home/labuser/Downloads/claude-ai-native-workbench/.tools/mcp/node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "--read-only",
+        "--confine-roots",
+        "/home/labuser/Downloads/claude-ai-native-workbench/rag/sources"
+      ]
+    }
+  }
+}

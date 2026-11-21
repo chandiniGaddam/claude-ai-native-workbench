@@ -1,0 +1,11 @@
+# Test and framework dependencies (Python 3.12). Direct dependencies are pinned exactly.
+# The full transitive set is locked in requirements.lock (uv pip compile).
+pytest==9.2.0
+pytest-playwright==0.10.0
+playwright==1.65.2        # must match the image mcr.microsoft.com/playwright/python:v1.65.2-noble
+pytest-html==4.2.0
+httpx==0.28.1
+rank-bm25==0.2.2          # deterministic offline retrieval for the RAG pipeline
+anthropic==2.11.0         # Claude API client; no calls are made without approval
+mcp==2.3.0                # MCP client for scripts/verify_mcp.py
+ruff==0.17.6

@@ -1,0 +1,1 @@
+{"retrieval": {"k": 4, "min_hit_at_k": 0.9, "min_mrr": 0.8}, "note": "Offline BM25 retrieval floors only. Ragas metric thresholds are set after the approved first run."}

@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(//home/labuser/Downloads/git-demo/**)",
+      "Bash(git push:*)",
+      "Bash(git remote add:*)",
+      "Bash(sudo apt:*)",
+      "Bash(sudo apt-get:*)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write|MultiEdit|NotebookEdit|Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I \"$CLAUDE_PROJECT_DIR/scripts/guard_readonly.py\""
+          }
+        ]
+      }
+    ]
+  }
+}
