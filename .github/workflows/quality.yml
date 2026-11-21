@@ -49,6 +49,22 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+      - name: Obtain pinned AUT starter source
+        run: |
+          set -euo pipefail
+          source_zip="$RUNNER_TEMP/D4 - Starter Code.zip"
+          curl --fail --location --retry 3 "$AUT_SOURCE_URL" -o "$source_zip"
+          echo "$AUT_SOURCE_SHA256  $source_zip" | sha256sum -c -
+
+          aut_root="$RUNNER_TEMP/aut"
+          mkdir -p "$aut_root"
+          unzip -q "$source_zip" -d "$aut_root"
+
+          test -f "$aut_root/starter_code/backend/pom.xml"
+          test -f "$aut_root/starter_code/frontend/package.json"
+
+          echo "AUT_DIR=$aut_root/starter_code" >> "$GITHUB_ENV"
+
 
       - uses: actions/setup-python@v5
         with:
